@@ -1,0 +1,13 @@
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# Другие файлы
+*.elf
+*.hex
+*.bin

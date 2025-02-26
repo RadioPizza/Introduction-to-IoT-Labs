@@ -1,3 +1,5 @@
+#include <Arduino.h>
+
 #define ESP8266
 
 #ifdef ESP8266
