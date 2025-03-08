@@ -10,8 +10,20 @@
 #include <WebServer.h>
 #endif
 
+
 #define SSID "MDO"
 #define PASSWORD "12345678"
+
+#include <Adafruit_NeoPixel.h>
+
+// Настройки для матрицы 8x8
+#define LED_PIN    4      // Пин, к которому подключена матрица
+#define LED_COUNT  256      // Количество светодиодов (8x8 = 64)
+
+// Создаем объект для управления матрицей
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
+
+
 
 IPAddress local_ip(192, 168, 2, 1);
 IPAddress gateway(192, 168, 2, 1);
@@ -31,6 +43,11 @@ void handle_NotFound();
 String SendHTML(uint8_t led_stat);
 
 void setup() {
+
+  strip.begin();           // Инициализация матрицы
+  strip.show();            // Очистка матрицы (все светодиоды выключены)
+  strip.setBrightness(50); // Установка яркости (от 0 до 255)
+
   Serial.begin(115200);
   pinMode(LED_PIN, OUTPUT);
   digitalWrite(LED_PIN, LOW);  // Выключаем светодиод при старте
@@ -61,8 +78,46 @@ void setup() {
   server.begin();
   Serial.println("HTTP server started");
 }
+// Функция для последовательного заполнения матрицы цветом
+void colorWipe(uint32_t color, int wait) {
+  for (int i = 0; i < strip.numPixels(); i++) {
+    strip.setPixelColor(i, color); // Устанавливаем цвет для каждого светодиода
+    strip.show();                  // Обновляем матрицу
+    delay(wait);                  // Задержка между светодиодами
+  }
+}
+
+// Функция для эффекта "бегущий пиксель"
+void theaterChase(uint32_t color, int wait) {
+  for (int a = 0; a < 10; a++) {  // Повторяем эффект 10 раз
+    for (int b = 0; b < 3; b++) { // 3 фазы эффекта
+      for (int i = 0; i < strip.numPixels(); i += 3) {
+        strip.setPixelColor(i + b, color); // Включаем каждый 3-й светодиод
+      }
+      strip.show();
+      delay(wait);
+      for (int i = 0; i < strip.numPixels(); i += 3) {
+        strip.setPixelColor(i + b, 0);     // Выключаем каждый 3-й светодиод
+      }
+    }
+  }
+}
 
 void loop() {
+
+  // Пример 1: Заполнение матрицы красным цветом
+  colorWipe(strip.Color(255, 0, 0), 5); // Красный
+  delay(1000);
+
+  // Пример 2: Заполнение матрицы зелёным цветом
+  colorWipe(strip.Color(0, 255, 0), 5); // Зелёный
+  delay(1000);
+
+  // Пример 3: Заполнение матрицы синим цветом
+  colorWipe(strip.Color(0, 0, 255), 5); // Синий
+  delay(1000);
+
+
   server.handleClient();  // Обработка клиентских запросов
   digitalWrite(LED_PIN, LED_status ? HIGH : LOW);  // Управление светодиодом
 }
@@ -122,3 +177,4 @@ void handle_led_off() {
 void handle_NotFound() {
   server.send(404, "text/plain", "Not found");
 }
+
