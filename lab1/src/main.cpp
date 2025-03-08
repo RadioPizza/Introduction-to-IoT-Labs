@@ -86,10 +86,13 @@ void loop() {
   digitalWrite(STATUS_LED_PIN, LED_status ? HIGH : LOW);
 
   uint32_t currentMillis = millis();
-  if (isAnimating && (currentMillis - previousMillis >= static_cast<uint32_t>(animationSpeed))) {
-    previousMillis = currentMillis;
-    currentOffset = (currentOffset + 1) % NUM_COLUMNS;
-    updateMatrix();
+  if (isAnimating) {
+    uint32_t currentDelay = 50000 / animationSpeed; // Преобразуем скорость в задержку
+    if (currentMillis - previousMillis >= currentDelay) {
+      previousMillis = currentMillis;
+      currentOffset = (currentOffset + 1) % NUM_COLUMNS;
+      updateMatrix();
+    }
   }
 }
 
@@ -188,7 +191,7 @@ String generateHTML() {
   html += "<button class='btn secondary' onclick=\"location.href='/stop'\">Stop</button>";
   
   html += "<p>Status: " + String(isAnimating ? "Running" : "Stopped") + "</p>";
-  html += "<p>Speed: " + String(animationSpeed) + "ms</p>";
+  html += "<p>Speed Level: " + String(animationSpeed) + " / 1000</p>";
   html += "</body></html>";
   
   return html;
