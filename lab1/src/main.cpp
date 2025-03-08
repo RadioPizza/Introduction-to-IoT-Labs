@@ -110,7 +110,10 @@ void updateMatrix() {
     // Применяем анимацию с учетом смещения
     uint8_t colorIndex = (logicalCol + currentOffset) % NUM_COLUMNS;
     
-    strip.setPixelColor(i, columnColors[colorIndex]);
+    // Рассчитываем новый индекс пикселя для вертикального отображения
+    uint16_t newIndex = col * 16 + row;
+    
+    strip.setPixelColor(newIndex, columnColors[colorIndex]);
   }
   strip.show();
 }
