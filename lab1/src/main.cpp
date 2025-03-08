@@ -1,180 +1,207 @@
 #include <Arduino.h>
-
-#define ESP8266
+#include <stdint.h>
 
 #ifdef ESP8266
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
+  #include <ESP8266WiFi.h>
+  #include <ESP8266WebServer.h>
 #else
-#include <WiFi.h>
-#include <WebServer.h>
+  #include <WiFi.h>
+  #include <WebServer.h>
 #endif
 
+#include <Adafruit_NeoPixel.h>
 
 #define SSID "MDO"
 #define PASSWORD "12345678"
 
-#include <Adafruit_NeoPixel.h>
+// LED Matrix settings
+#define LED_PIN     4
+#define LED_COUNT   256
+#define STATUS_LED_PIN 2
 
-// Настройки для матрицы 8x8
-#define LED_PIN    4      // Пин, к которому подключена матрица
-#define LED_COUNT  256      // Количество светодиодов (8x8 = 64)
+// Animation settings
+#define NUM_COLUMNS 4
+#define DEFAULT_SPEED 100
+#define MIN_SPEED 50
+#define MAX_SPEED 1000
 
-// Создаем объект для управления матрицей
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
-
-
+Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 IPAddress local_ip(192, 168, 2, 1);
 IPAddress gateway(192, 168, 2, 1);
 IPAddress subnet(255, 255, 255, 0);
 ESP8266WebServer server(80);
 
-// Пин для встроенного светодиода
-#define LED_PIN 2  // GPIO2 (D4 на NodeMCU)
+// Control variables
+uint8_t LED_status = 0;
+uint32_t columnColors[NUM_COLUMNS] = { 
+  strip.Color(255, 0, 0),   // Red
+  strip.Color(0, 255, 0),   // Green
+  strip.Color(0, 0, 255),   // Blue
+  strip.Color(255, 255, 0)  // Yellow
+};
 
-uint8_t LED_status = 0;  // Переменная для состояния светодиода (0 — выключен, 1 — включен)
+int32_t animationSpeed = DEFAULT_SPEED;
+bool isAnimating = false;
+int32_t currentOffset = 0;
+uint32_t previousMillis = 0;
 
-// Прототипы функций
-void handle_OnConnect();
-void handle_led_on();
-void handle_led_off();
-void handle_NotFound();
-String SendHTML(uint8_t led_stat);
+// Function prototypes
+void handleRoot();
+void handleUpdate();
+void handleRun();
+void handleStop();
+void handleNotFound();
+String generateHTML();
+void updateMatrix();
+uint32_t parseColor(const String& colorStr);
+String colorToString(uint32_t color);
+String byteToHex(uint8_t value);
 
 void setup() {
-
-  strip.begin();           // Инициализация матрицы
-  strip.show();            // Очистка матрицы (все светодиоды выключены)
-  strip.setBrightness(50); // Установка яркости (от 0 до 255)
-
   Serial.begin(115200);
-  pinMode(LED_PIN, OUTPUT);
-  digitalWrite(LED_PIN, LOW);  // Выключаем светодиод при старте
+  pinMode(STATUS_LED_PIN, OUTPUT);
+  digitalWrite(STATUS_LED_PIN, LOW);
 
-  // Установка режима Wi-Fi в режим точки доступа
+  strip.begin();
+  strip.setBrightness(50);
+  updateMatrix();
+
   WiFi.mode(WIFI_AP);
-
-  // Запуск точки доступа
-  bool result = WiFi.softAP(SSID, PASSWORD);
   WiFi.softAPConfig(local_ip, gateway, subnet);
-  delay(100);
+  WiFi.softAP(SSID, PASSWORD);
 
-  if (result) {
-    Serial.println("Точка доступа запущена успешно!");
-    Serial.print("IP адрес: ");
-    Serial.println(WiFi.softAPIP());  // Вывод IP-адреса точки доступа
-  } else {
-    Serial.println("Ошибка запуска точки доступа!");
-  }
+  server.on("/", handleRoot);
+  server.on("/update", handleUpdate);
+  server.on("/run", handleRun);
+  server.on("/stop", handleStop);
+  server.onNotFound(handleNotFound);
 
-  // Регистрация обработчиков запросов
-  server.on("/", handle_OnConnect);      // Главная страница
-  server.on("/led_on", handle_led_on);   // Включение светодиода
-  server.on("/led_off", handle_led_off); // Выключение светодиода
-  server.onNotFound(handle_NotFound);    // Обработка неизвестных запросов
-
-  // Запуск сервера
   server.begin();
   Serial.println("HTTP server started");
 }
-// Функция для последовательного заполнения матрицы цветом
-void colorWipe(uint32_t color, int wait) {
-  for (int i = 0; i < strip.numPixels(); i++) {
-    strip.setPixelColor(i, color); // Устанавливаем цвет для каждого светодиода
-    strip.show();                  // Обновляем матрицу
-    delay(wait);                  // Задержка между светодиодами
-  }
-}
-
-// Функция для эффекта "бегущий пиксель"
-void theaterChase(uint32_t color, int wait) {
-  for (int a = 0; a < 10; a++) {  // Повторяем эффект 10 раз
-    for (int b = 0; b < 3; b++) { // 3 фазы эффекта
-      for (int i = 0; i < strip.numPixels(); i += 3) {
-        strip.setPixelColor(i + b, color); // Включаем каждый 3-й светодиод
-      }
-      strip.show();
-      delay(wait);
-      for (int i = 0; i < strip.numPixels(); i += 3) {
-        strip.setPixelColor(i + b, 0);     // Выключаем каждый 3-й светодиод
-      }
-    }
-  }
-}
 
 void loop() {
+  server.handleClient();
+  digitalWrite(STATUS_LED_PIN, LED_status ? HIGH : LOW);
 
-  // Пример 1: Заполнение матрицы красным цветом
-  colorWipe(strip.Color(255, 0, 0), 5); // Красный
-  delay(1000);
-
-  // Пример 2: Заполнение матрицы зелёным цветом
-  colorWipe(strip.Color(0, 255, 0), 5); // Зелёный
-  delay(1000);
-
-  // Пример 3: Заполнение матрицы синим цветом
-  colorWipe(strip.Color(0, 0, 255), 5); // Синий
-  delay(1000);
-
-
-  server.handleClient();  // Обработка клиентских запросов
-  digitalWrite(LED_PIN, LED_status ? HIGH : LOW);  // Управление светодиодом
-}
-
-// Функция для генерации HTML-страницы
-String SendHTML(uint8_t led_stat) {
-  String html = "<!DOCTYPE html>\
-  <html>\
-  <head>\
-    <meta charset=\"UTF-8\">\
-    <title>LED Control server</title>\
-    <style>\
-      html { font-family: Helvetica; display: inline-block; margin: 0px auto; text-align: center; }\
-      body { margin-top: 50px; }\
-      h1 { color: #444444; margin: 50px auto 30px; }\
-      h3 { color: #444444; margin-bottom: 50px; }\
-      .button { display: block; width: 80px; background-color: #3498db; border: none; color: white; padding: 13px 30px; text-decoration: none; font-size: 18px; margin: 0px auto 35px; cursor: pointer; border-radius: 4px; }\
-      .button-on { background-color: #3498db; }\
-      .button-on:active { background-color: #2980b9; }\
-      .button-off { background-color: #34495e; }\
-      .button-off:active { background-color: #2c3e50; }\
-      p { font-size: 14px; color: #888; margin-bottom: 10px; }\
-    </style>\
-  </head>\
-  <body>\
-    <h1>ESP8266 Веб сервер</h1>\
-    <h3>Режим точка доступа WiFi (AP)</h3>";
-
-  if (led_stat) {
-    html += "<p>Состояние LED: ВКЛ.</p><a class=\"button button-off\" href=\"/led_off\">ВЫКЛ.</a>";
-  } else {
-    html += "<p>Состояние LED: ВЫКЛ.</p><a class=\"button button-on\" href=\"/led_on\">ВКЛ.</a>";
+  uint32_t currentMillis = millis();
+  if (isAnimating && (currentMillis - previousMillis >= static_cast<uint32_t>(animationSpeed))) {
+    previousMillis = currentMillis;
+    currentOffset = (currentOffset + 1) % NUM_COLUMNS;
+    updateMatrix();
   }
-
-  html += "</body></html>";
-  return html;
 }
 
-// Обработчик главной страницы
-void handle_OnConnect() {
-  server.send(200, "text/html", SendHTML(LED_status));
+void updateMatrix() {
+  for (uint16_t i = 0; i < strip.numPixels(); i++) {
+    uint8_t x = i % 16;
+    uint8_t logicalCol = x / 4;
+    uint8_t colorIndex = (logicalCol + currentOffset) % NUM_COLUMNS;
+    strip.setPixelColor(i, columnColors[colorIndex]);
+  }
+  strip.show();
 }
 
-// Обработчик для включения светодиода
-void handle_led_on() {
-  LED_status = 1;
-  server.send(200, "text/html", SendHTML(LED_status));
+// HTTP Handlers
+void handleRoot() {
+  server.send(200, "text/html", generateHTML());
 }
 
-// Обработчик для выключения светодиода
-void handle_led_off() {
-  LED_status = 0;
-  server.send(200, "text/html", SendHTML(LED_status));
+void handleUpdate() {
+  for (uint8_t i = 0; i < NUM_COLUMNS; i++) {
+    String param = "c" + String(i);
+    if (server.hasArg(param)) {
+      columnColors[i] = parseColor(server.arg(param));
+    }
+  }
+  
+  if (server.hasArg("speed")) {
+    animationSpeed = constrain(server.arg("speed").toInt(), MIN_SPEED, MAX_SPEED);
+  }
+  
+  currentOffset = 0;
+  updateMatrix();
+  handleRoot();
 }
 
-// Обработчик для неизвестных запросов
-void handle_NotFound() {
+void handleRun() {
+  isAnimating = true;
+  handleRoot();
+}
+
+void handleStop() {
+  isAnimating = false;
+  handleRoot();
+}
+
+void handleNotFound() {
   server.send(404, "text/plain", "Not found");
 }
 
+// HTML Generation
+String generateHTML() {
+  String html = "<!DOCTYPE html><html><head>";
+  html += "<meta charset='UTF-8'><title>LED Matrix Control</title>";
+  html += "<style>";
+  html += "body{font-family:Arial,sans-serif;text-align:center;margin-top:30px;}";
+  html += ".control-group{margin:20px auto;width:300px;}";
+  html += "input[type='color']{margin:10px;vertical-align:middle;}";
+  html += "input[type='range']{width:80%;margin:15px 0;}";
+  html += ".btn{padding:10px 20px;margin:5px;cursor:pointer;border:none;border-radius:4px;}";
+  html += ".primary{background:#2196F3;color:white;}";
+  html += ".secondary{background:#607D8B;color:white;}";
+  html += "</style></head><body>";
+  html += "<h1>LED Matrix Controller</h1>";
+  
+  html += "<form action='/update' method='GET'>";
+  for (uint8_t i = 0; i < NUM_COLUMNS; i++) {
+    html += "<div class='control-group'>";
+    html += "Column " + String(i+1) + ": ";
+    html += "<input type='color' name='c" + String(i) + "'";
+    html += " value='" + colorToString(columnColors[i]) + "'>";
+    html += "</div>";
+  }
+  
+  html += "<div class='control-group'>";
+  html += "Speed: <input type='range' name='speed'";
+  html += " min='" + String(MIN_SPEED) + "' max='" + String(MAX_SPEED) + "'";
+  html += " value='" + String(animationSpeed) + "'>";
+  html += "</div>";
+  
+  html += "<input class='btn primary' type='submit' value='Update'>";
+  html += "</form>";
+  
+  html += "<button class='btn secondary' onclick=\"location.href='/run'\">Run</button>";
+  html += "<button class='btn secondary' onclick=\"location.href='/stop'\">Stop</button>";
+  
+  html += "<p>Status: " + String(isAnimating ? "Running" : "Stopped") + "</p>";
+  html += "<p>Speed: " + String(animationSpeed) + "ms</p>";
+  html += "</body></html>";
+  
+  return html;
+}
+
+// Color conversion utilities
+uint32_t parseColor(const String& colorStr) {
+  if (colorStr.length() != 7 || colorStr[0] != '#') return 0;
+  
+  uint32_t rgb = strtoul(colorStr.substring(1).c_str(), NULL, 16);
+  return strip.Color(
+    (rgb >> 16) & 0xFF,  // Red
+    (rgb >> 8) & 0xFF,   // Green
+    rgb & 0xFF           // Blue
+  );
+}
+
+String colorToString(uint32_t color) {
+  uint8_t r = (color >> 16) & 0xFF;
+  uint8_t g = (color >> 8) & 0xFF;
+  uint8_t b = color & 0xFF;
+  return "#" + byteToHex(r) + byteToHex(g) + byteToHex(b);
+}
+
+String byteToHex(uint8_t value) {
+  const char* hexDigits = "0123456789ABCDEF";
+  return String(hexDigits[value >> 4]) + String(hexDigits[value & 0x0F]);
+}
