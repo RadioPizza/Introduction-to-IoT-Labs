@@ -95,9 +95,21 @@ void loop() {
 
 void updateMatrix() {
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    uint8_t x = i % 16;
-    uint8_t logicalCol = x / 4;
+    // Определяем координаты пикселя
+    uint8_t row = i / 16;    // Номер строки (0-15)
+    uint8_t col = i % 16;    // Номер столбца (0-15)
+
+    // Коррекция направления для зигзагообразных матриц
+    if (row % 2 != 0) {
+      col = 15 - col;
+    }
+
+    // Определяем принадлежность к логическому столбцу (4 колонки по 4 пикселя)
+    uint8_t logicalCol = col / 4;
+    
+    // Применяем анимацию с учетом смещения
     uint8_t colorIndex = (logicalCol + currentOffset) % NUM_COLUMNS;
+    
     strip.setPixelColor(i, columnColors[colorIndex]);
   }
   strip.show();
