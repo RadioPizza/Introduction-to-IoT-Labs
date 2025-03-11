@@ -46,6 +46,7 @@ uint32_t columnColors[NUM_COLUMNS] = {
 
 uint32_t animationSpeed = DEFAULT_SPEED;
 bool isAnimating = false;
+bool animationDirection = true; // true = right, false = left
 int32_t currentOffset = 0;
 uint32_t previousMillis = 0;
 
@@ -93,7 +94,7 @@ void loop() {
     uint32_t currentDelay = 50000 / animationSpeed; // Преобразуем скорость в задержку
     if (currentMillis - previousMillis >= currentDelay) {
       previousMillis = currentMillis;
-      currentOffset = (currentOffset + 1) % NUM_COLUMNS;
+      currentOffset = (currentOffset + (animationDirection ? 1 : -1) + NUM_COLUMNS) % NUM_COLUMNS;
       updateMatrix();
     }
   }
@@ -145,7 +146,10 @@ void handleUpdate() {
     uint8_t brightness = server.arg("brightness").toInt();
     brightness = constrain(brightness, 0, 255); // Ограничиваем значение от 0 до 255
     strip.setBrightness(brightness);
-    updateMatrix();
+  }
+
+  if (server.hasArg("direction")) {
+    animationDirection = (server.arg("direction") == "right");
   }
   
   currentOffset = 0;
@@ -201,6 +205,12 @@ String generateHTML() {
   html += "Brightness: <input type='range' name='brightness'";
   html += " min='0' max='255'";
   html += " value='" + String(strip.getBrightness()) + "'>";
+  html += "</div>";
+  
+  html += "<div class='control-group'>";
+  html += "Direction: ";
+  html += "<label><input type='radio' name='direction' value='right' " + String(animationDirection ? "checked" : "") + "> Right</label>";
+  html += "<label><input type='radio' name='direction' value='left' " + String(!animationDirection ? "checked" : "") + "> Left</label>";
   html += "</div>";
   
   html += "<input class='btn primary' type='submit' value='Update'>";
