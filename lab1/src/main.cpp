@@ -138,6 +138,13 @@ void handleUpdate() {
     animationSpeed = constrain(server.arg("speed").toInt(), MIN_SPEED, MAX_SPEED);
   }
   
+  if (server.hasArg("brightness")) {
+    uint8_t brightness = server.arg("brightness").toInt();
+    brightness = constrain(brightness, 0, 255); // Ограничиваем значение от 0 до 255
+    strip.setBrightness(brightness);
+    updateMatrix();
+  }
+  
   currentOffset = 0;
   updateMatrix();
   handleRoot();
@@ -185,6 +192,12 @@ String generateHTML() {
   html += "Speed: <input type='range' name='speed'";
   html += " min='" + String(MIN_SPEED) + "' max='" + String(MAX_SPEED) + "'";
   html += " value='" + String(animationSpeed) + "'>";
+  html += "</div>";
+  
+  html += "<div class='control-group'>";
+  html += "Brightness: <input type='range' name='brightness'";
+  html += " min='0' max='255'";
+  html += " value='" + String(strip.getBrightness()) + "'>";
   html += "</div>";
   
   html += "<input class='btn primary' type='submit' value='Update'>";
