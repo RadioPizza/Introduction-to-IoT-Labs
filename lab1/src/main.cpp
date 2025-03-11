@@ -14,10 +14,13 @@
 #define SSID "MDO"
 #define PASSWORD "12345678"
 
+#define STATUS_LED_PIN 2
+
 // LED Matrix settings
 #define LED_PIN     4
-#define LED_COUNT   256
-#define STATUS_LED_PIN 2
+#define MATRIX_WIDTH 16
+#define MATRIX_HEIGHT 16
+#define LED_COUNT (MATRIX_WIDTH * MATRIX_HEIGHT)
 
 // Animation settings
 #define NUM_COLUMNS 4
@@ -99,22 +102,22 @@ void loop() {
 void updateMatrix() {
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
     // Определяем координаты пикселя
-    uint8_t row = i / 16;    // Номер строки (0-15)
-    uint8_t col = i % 16;    // Номер столбца (0-15)
+    uint8_t row = i / MATRIX_WIDTH;    // Номер строки
+    uint8_t col = i % MATRIX_WIDTH;    // Номер столбца
 
     // Коррекция направления для зигзагообразных матриц
     if (row % 2 != 0) {
-      col = 15 - col;
+      col = (MATRIX_WIDTH - 1) - col;
     }
 
-    // Определяем принадлежность к логическому столбцу (4 колонки по 4 пикселя)
-    uint8_t logicalCol = col / 4;
+    // Определяем принадлежность к логическому столбцу
+    uint8_t logicalCol = col / (MATRIX_WIDTH / NUM_COLUMNS);
     
     // Применяем анимацию с учетом смещения
     uint8_t colorIndex = (logicalCol + currentOffset) % NUM_COLUMNS;
     
     // Рассчитываем новый индекс пикселя для вертикального отображения
-    uint16_t newIndex = col * 16 + row;
+    uint16_t newIndex = col * MATRIX_HEIGHT + row;
     
     strip.setPixelColor(newIndex, columnColors[colorIndex]);
   }
