@@ -28,6 +28,10 @@
 #define MIN_SPEED 50
 #define MAX_SPEED 1000
 
+#if NUM_COLUMNS < 2 || NUM_COLUMNS > MATRIX_WIDTH
+  #error "NUM_COLUMNS must be between 2 and MATRIX_WIDTH"
+#endif
+
 Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 
 IPAddress local_ip(192, 168, 2, 1);
@@ -40,8 +44,6 @@ uint8_t LED_status = 0;
 uint32_t columnColors[NUM_COLUMNS] = { 
   strip.Color(255, 0, 0),   // Red
   strip.Color(0, 255, 0),   // Green
-  strip.Color(0, 0, 255),   // Blue
-  strip.Color(255, 255, 0)  // Yellow
 };
 
 uint32_t animationSpeed = DEFAULT_SPEED;
