@@ -173,53 +173,44 @@ void handleNotFound() {
   server.send(404, "text/plain", "Not found");
 }
 
-// HTML Generation
 String generateHTML() {
   String html = "<!DOCTYPE html><html><head>";
   html += "<meta charset='UTF-8'><title>LED Matrix Control</title>";
-  html += "<style>";
-  html += "body{font-family:Arial,sans-serif;text-align:center;margin-top:30px;}";
-  html += ".control-group{margin:20px auto;width:300px;}";
-  html += "input[type='color']{margin:10px;vertical-align:middle;}";
-  html += "input[type='range']{width:80%;margin:15px 0;}";
-  html += ".btn{padding:10px 20px;margin:5px;cursor:pointer;border:none;border-radius:4px;}";
-  html += ".primary{background:#2196F3;color:white;}";
-  html += ".secondary{background:#607D8B;color:white;}";
-  html += "</style></head><body>";
+  html += "</head><body>";
   html += "<h1>LED Matrix Controller</h1>";
   
   html += "<form action='/update' method='GET'>";
   for (uint8_t i = 0; i < NUM_COLUMNS; i++) {
-    html += "<div class='control-group'>";
+    html += "<div>";
     html += "Column " + String(i+1) + ": ";
     html += "<input type='color' name='c" + String(i) + "'";
     html += " value='" + colorToString(columnColors[i]) + "'>";
     html += "</div>";
   }
   
-  html += "<div class='control-group'>";
+  html += "<div>";
   html += "Speed: <input type='range' name='speed'";
   html += " min='" + String(MIN_SPEED) + "' max='" + String(MAX_SPEED) + "'";
   html += " value='" + String(animationSpeed) + "'>";
   html += "</div>";
   
-  html += "<div class='control-group'>";
+  html += "<div>";
   html += "Brightness: <input type='range' name='brightness'";
   html += " min='0' max='255'";
   html += " value='" + String(strip.getBrightness()) + "'>";
   html += "</div>";
   
-  html += "<div class='control-group'>";
+  html += "<div>";
   html += "Direction: ";
   html += "<label><input type='radio' name='direction' value='right' " + String(animationDirection ? "checked" : "") + "> Right</label>";
   html += "<label><input type='radio' name='direction' value='left' " + String(!animationDirection ? "checked" : "") + "> Left</label>";
   html += "</div>";
   
-  html += "<input class='btn primary' type='submit' value='Update'>";
+  html += "<input type='submit' value='Update'>";
   html += "</form>";
   
-  html += "<button class='btn secondary' onclick=\"location.href='/run'\">Run</button>";
-  html += "<button class='btn secondary' onclick=\"location.href='/stop'\">Stop</button>";
+  html += "<button onclick=\"location.href='/run'\">Run</button>";
+  html += "<button onclick=\"location.href='/stop'\">Stop</button>";
   
   html += "<p>Status: " + String(isAnimating ? "Running" : "Stopped") + "</p>";
   html += "<p>Speed Level: " + String(animationSpeed) + " / 1000</p>";
