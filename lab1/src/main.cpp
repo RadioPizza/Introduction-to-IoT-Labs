@@ -44,7 +44,7 @@ uint32_t columnColors[NUM_COLUMNS] = {
   strip.Color(255, 255, 0)  // Yellow
 };
 
-int32_t animationSpeed = DEFAULT_SPEED;
+uint32_t animationSpeed = DEFAULT_SPEED;
 bool isAnimating = false;
 int32_t currentOffset = 0;
 uint32_t previousMillis = 0;
