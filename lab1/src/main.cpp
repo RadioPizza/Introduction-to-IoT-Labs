@@ -154,7 +154,6 @@ void handleUpdate() {
     animationDirection = (server.arg("direction") == "right");
   }
   
-  currentOffset = 0;
   updateMatrix();
   handleRoot();
 }
