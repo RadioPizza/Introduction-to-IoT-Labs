@@ -189,7 +189,9 @@ void handleNotFound() {
 }
 
 String generateHTML() {
-  String html = "<!DOCTYPE html><html><head>";
+  String html;
+  html.reserve(1024); // Резервируем память
+  html += "<!DOCTYPE html><html><head>";
   html += "<meta charset='UTF-8'><title>LED Matrix Control</title>";
   html += "</head><body>";
   html += "<h1>LED Matrix Controller</h1>";
