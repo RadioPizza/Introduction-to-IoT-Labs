@@ -30,6 +30,7 @@
 #define DEFAULT_SPEED 100
 #define MIN_SPEED 50
 #define MAX_SPEED 1000
+#define COLUMN_WIDTH (MATRIX_WIDTH / NUM_COLUMNS)
 
 // Валидация количества логических столбцов
 #if NUM_COLUMNS < 2 || NUM_COLUMNS > MATRIX_WIDTH
@@ -122,7 +123,7 @@ void updateMatrix() {
 
     // Определяем принадлежность текущего столбца к логическому столбцу
     // Логический столбец - это группа физических столбцов, объединенных для анимации
-    uint8_t logicalCol = col / (MATRIX_WIDTH / NUM_COLUMNS);
+    uint8_t logicalCol = col / COLUMN_WIDTH;
 
     // Вычисляем индекс цвета для текущего логического столбца с учетом смещения (анимации)
     // currentOffset - это текущее смещение анимации
