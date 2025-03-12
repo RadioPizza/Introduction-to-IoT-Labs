@@ -11,23 +11,26 @@
 
 #include <Adafruit_NeoPixel.h>
 
-#define SSID "MDO"
+// Настройки сети
+#define SSID "Matrix controller 1A22"
 #define PASSWORD "12345678"
 
+// Встроенный светодиод
 #define STATUS_LED_PIN 2
 
-// LED Matrix settings
+// Настройки матрицы
 #define LED_PIN     4
 #define MATRIX_WIDTH 16
 #define MATRIX_HEIGHT 16
 #define LED_COUNT (MATRIX_WIDTH * MATRIX_HEIGHT)
 
-// Animation settings
+// Настройки анимации
 #define NUM_COLUMNS 4
 #define DEFAULT_SPEED 100
 #define MIN_SPEED 50
 #define MAX_SPEED 1000
 
+// Валидация количества логических столбцов
 #if NUM_COLUMNS < 2 || NUM_COLUMNS > MATRIX_WIDTH
   #error "NUM_COLUMNS must be between 2 and MATRIX_WIDTH"
 #endif
@@ -37,22 +40,20 @@ Adafruit_NeoPixel strip(LED_COUNT, LED_PIN, NEO_GRB + NEO_KHZ800);
 IPAddress local_ip(192, 168, 2, 1);
 IPAddress gateway(192, 168, 2, 1);
 IPAddress subnet(255, 255, 255, 0);
-ESP8266WebServer server(80);
+ESP8266WebServer server(80); // порт 80 - для HTTP сервера
 
-// Control variables
 uint8_t LED_status = 0;
-uint32_t columnColors[NUM_COLUMNS] = { 
-  strip.Color(255, 0, 0),   // Red
-  strip.Color(0, 255, 0),   // Green
-};
-
-uint32_t animationSpeed = DEFAULT_SPEED;
 bool isAnimating = false;
-bool animationDirection = true; // true = right, false = left
+bool animationDirection = true; // true = вправо, false = влево
+uint32_t animationSpeed = DEFAULT_SPEED;
 int32_t currentOffset = 0;
 uint32_t previousMillis = 0;
+uint32_t columnColors[NUM_COLUMNS] = { 
+  strip.Color(255, 0, 0),   // Красный столбец
+  strip.Color(0, 255, 0),   // Зеленый столбец
+};
 
-// Function prototypes
+// Прототипы функций
 void handleRoot();
 void handleUpdate();
 void handleRun();
@@ -84,7 +85,7 @@ void setup() {
   server.onNotFound(handleNotFound);
 
   server.begin();
-  Serial.println("HTTP server started");
+  Serial.println("HTTP сервер запущен");
 }
 
 void loop() {
@@ -103,31 +104,44 @@ void loop() {
 }
 
 void updateMatrix() {
+  // Проходим по всем пикселям матрицы
   for (uint16_t i = 0; i < strip.numPixels(); i++) {
-    // Определяем координаты пикселя
+    // Вычисляем координаты текущего пикселя в матрице
+    // row - номер строки (от 0 до MATRIX_HEIGHT - 1)
+    // col - номер столбца (от 0 до MATRIX_WIDTH - 1)
     uint8_t row = i / MATRIX_WIDTH;    // Номер строки
     uint8_t col = i % MATRIX_WIDTH;    // Номер столбца
 
-    // Коррекция направления для зигзагообразных матриц
+    // Коррекция направления для зигзагообразных LED-матриц
+    // В таких матрицах пиксели в нечётных строках идут в обратном порядке
     if (row % 2 != 0) {
-      col = (MATRIX_WIDTH - 1) - col;
+      col = (MATRIX_WIDTH - 1) - col;  // Инвертируем столбец для нечетных строк
     }
 
-    // Определяем принадлежность к логическому столбцу
+    // Определяем принадлежность текущего столбца к логическому столбцу
+    // Логический столбец - это группа физических столбцов, объединенных для анимации
     uint8_t logicalCol = col / (MATRIX_WIDTH / NUM_COLUMNS);
-    
-    // Применяем анимацию с учетом смещения
+
+    // Вычисляем индекс цвета для текущего логического столбца с учетом смещения (анимации)
+    // currentOffset - это текущее смещение анимации
+    // NUM_COLUMNS - количество логических столбцов
     uint8_t colorIndex = (logicalCol + currentOffset) % NUM_COLUMNS;
-    
-    // Рассчитываем новый индекс пикселя для вертикального отображения
+
+    // Транспонирование матрицы: преобразуем координаты (row, col) в (col, row)
+    // Это нужно для правильного отображения
+    // newIndex - это индекс пикселя в линейном массиве strip, соответствующий новым координатам
     uint16_t newIndex = col * MATRIX_HEIGHT + row;
-    
+
+    // Устанавливаем цвет для пикселя с индексом newIndex
+    // columnColors[colorIndex] - цвет из массива, соответствующий текущему логическому столбцу
     strip.setPixelColor(newIndex, columnColors[colorIndex]);
   }
+
+  // Обновляем матрицу, чтобы применить изменения
   strip.show();
 }
 
-// HTTP Handlers
+// Обработчики HTTP-запросов
 void handleRoot() {
   server.send(200, "text/html", generateHTML());
 }
@@ -178,6 +192,7 @@ String generateHTML() {
   html += "</head><body>";
   html += "<h1>LED Matrix Controller</h1>";
   
+  // Форма для обновления параметров
   html += "<form action='/update' method='GET'>";
   for (uint8_t i = 0; i < NUM_COLUMNS; i++) {
     html += "<div>";
@@ -187,30 +202,36 @@ String generateHTML() {
     html += "</div>";
   }
   
+  // Поле для настройки скорости анимации
   html += "<div>";
   html += "Speed: <input type='range' name='speed'";
   html += " min='" + String(MIN_SPEED) + "' max='" + String(MAX_SPEED) + "'";
   html += " value='" + String(animationSpeed) + "'>";
   html += "</div>";
   
+  // Поле для настройки яркости
   html += "<div>";
   html += "Brightness: <input type='range' name='brightness'";
   html += " min='0' max='255'";
   html += " value='" + String(strip.getBrightness()) + "'>";
   html += "</div>";
   
+  // Поле для выбора направления анимации
   html += "<div>";
   html += "Direction: ";
   html += "<label><input type='radio' name='direction' value='right' " + String(animationDirection ? "checked" : "") + "> Right</label>";
   html += "<label><input type='radio' name='direction' value='left' " + String(!animationDirection ? "checked" : "") + "> Left</label>";
   html += "</div>";
   
+  // Кнопка для отправки формы
   html += "<input type='submit' value='Update'>";
   html += "</form>";
   
+  // Кнопки для запуска и остановки анимации
   html += "<button onclick=\"location.href='/run'\">Run</button>";
   html += "<button onclick=\"location.href='/stop'\">Stop</button>";
   
+  // Отображение текущего статуса и скорости анимации
   html += "<p>Status: " + String(isAnimating ? "Running" : "Stopped") + "</p>";
   html += "<p>Speed Level: " + String(animationSpeed) + " / 1000</p>";
   html += "</body></html>";
@@ -218,26 +239,56 @@ String generateHTML() {
   return html;
 }
 
-// Color conversion utilities
+// Утилиты для работы с цветом
+
+// Преобразует строку с цветом в формате "#RRGGBB" в 32-битное значение цвета
 uint32_t parseColor(const String& colorStr) {
+  // Проверяем, что строка имеет правильный формат:
+  // Длина строки должна быть 7 символов (включая '#'), и первый символ должен быть '#'
   if (colorStr.length() != 7 || colorStr[0] != '#') return 0;
-  
+
+  // Преобразуем строку в 32-битное число:
+  // Убираем первый символ '#' с помощью substring(1)
+  // Преобразуем оставшуюся строку в число с помощью strtoul (строка в unsigned long)
+  // Основание системы счисления — 16
   uint32_t rgb = strtoul(colorStr.substring(1).c_str(), NULL, 16);
+
+  // Разделяем число на каналы R, G, B и создаем цвет с помощью strip.Color:
+  // - (rgb >> 16) & 0xFF: извлекаем красный канал (первые два символа после '#')
+  // - (rgb >> 8) & 0xFF: извлекаем зеленый канал (средние два символа)
+  // - rgb & 0xFF: извлекаем синий канал (последние два символа)
   return strip.Color(
-    (rgb >> 16) & 0xFF,  // Red
-    (rgb >> 8) & 0xFF,   // Green
-    rgb & 0xFF           // Blue
+    (rgb >> 16) & 0xFF,  // Красный канал
+    (rgb >> 8) & 0xFF,   // Зеленый канал
+    rgb & 0xFF           // Синий канал
   );
 }
 
+// Преобразует 32-битное значение цвета в строку формата "#RRGGBB"
 String colorToString(uint32_t color) {
+  // Извлекаем каналы R, G, B из 32-битного значения цвета:
+  // - (color >> 16) & 0xFF: извлекаем красный канал
+  // - (color >> 8) & 0xFF: извлекаем зеленый канал
+  // - color & 0xFF: извлекаем синий канал
   uint8_t r = (color >> 16) & 0xFF;
   uint8_t g = (color >> 8) & 0xFF;
   uint8_t b = color & 0xFF;
+
+  // Преобразуем каждый канал в шестнадцатеричную строку и объединяем их:
+  // - byteToHex(r): преобразует красный канал в шестнадцатеричный формат
+  // - byteToHex(g): преобразует зеленый канал в шестнадцатеричный формат
+  // - byteToHex(b): преобразует синий канал в шестнадцатеричный формат
   return "#" + byteToHex(r) + byteToHex(g) + byteToHex(b);
 }
 
+// Преобразует 8-битное значение в шестнадцатеричную строку из двух символов
 String byteToHex(uint8_t value) {
+  // Массив символов для шестнадцатеричных цифр
   const char* hexDigits = "0123456789ABCDEF";
+
+  // Преобразуем значение в шестнадцатеричный формат:
+  // - value >> 4: извлекаем старшую половину байта (первые 4 бита)
+  // - value & 0x0F: извлекаем младшую половину байта (последние 4 бита)
+  // - Используем массив hexDigits для преобразования чисел в символы
   return String(hexDigits[value >> 4]) + String(hexDigits[value & 0x0F]);
 }
