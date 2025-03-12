@@ -23,6 +23,7 @@
 #define MATRIX_WIDTH 16
 #define MATRIX_HEIGHT 16
 #define LED_COUNT (MATRIX_WIDTH * MATRIX_HEIGHT)
+#define MATRIX_ZIGZAG
 
 // Настройки анимации
 #define NUM_COLUMNS 4
@@ -113,10 +114,11 @@ void updateMatrix() {
     uint8_t col = i % MATRIX_WIDTH;    // Номер столбца
 
     // Коррекция направления для зигзагообразных LED-матриц
-    // В таких матрицах пиксели в нечётных строках идут в обратном порядке
-    if (row % 2 != 0) {
-      col = (MATRIX_WIDTH - 1) - col;  // Инвертируем столбец для нечетных строк
-    }
+    #ifdef MATRIX_ZIGZAG
+      if (row % 2 != 0) {
+        col = (MATRIX_WIDTH - 1) - col;  // Инвертируем столбец для нечетных строк
+      }
+    #endif
 
     // Определяем принадлежность текущего столбца к логическому столбцу
     // Логический столбец - это группа физических столбцов, объединенных для анимации
