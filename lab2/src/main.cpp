@@ -1,20 +1,33 @@
+/**
+ * @file NodeMCU_LED_Control.ino
+ * @brief Программа для управления светодиодом через веб-интерфейс и физическую кнопку
+ * @details Создает точку доступа Wi-Fi и веб-сервер для управления состоянием светодиода
+ */
+
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <EncButton.h>
 #include <stdint.h>
 
-#define LED_PIN D4            // Встроенный светодиод
-#define BUTTON_PIN D0         // Физическая кнопка
-#define AP_SSID "NodeMCU-LED" // Имя точки доступа
-#define AP_PASS "12345678"    // Пароль точки доступа
+// Пины подключения
+#define LED_PIN D4            ///< Пин подключения встроенного светодиода
+#define BUTTON_PIN D0         ///< Пин подключения физической кнопки
 
-ESP8266WebServer server(80);
-Button btn(BUTTON_PIN, INPUT_PULLUP);
+// Настройки точки доступа
+#define AP_SSID "NodeMCU-LED" ///< SSID создаваемой Wi-Fi сети
+#define AP_PASS "12345678"    ///< Пароль создаваемой Wi-Fi сети
 
-volatile uint8_t ledState = false;
-uint16_t lastUpdate = 0;
+ESP8266WebServer server(80);          ///< Объект веб-сервера на порту 80
+Button btn(BUTTON_PIN, INPUT_PULLUP); ///< Объект кнопки с подтяжкой к питанию
 
+volatile uint8_t ledState = false;    ///< Текущее состояние светодиода
+uint16_t lastUpdate = 0;              ///< Для периодического обновления
+
+/**
+ * @brief HTML-шаблон веб-страницы
+ * @details Хранится в памяти программ (PROGMEM) для экономии RAM
+ */
 const char index_html[] PROGMEM = R"rawliteral(
   <!DOCTYPE HTML>
   <html>
@@ -46,7 +59,6 @@ const char index_html[] PROGMEM = R"rawliteral(
     <h1>Управление светодиодом</h1>
     <button class="button %STATE%" onclick="toggleLED()">%STATE%</button>
     <div class="status">
-      IP: %IP%<br>
       Подключено устройств: %CLIENTS%
     </div>
     <script>
@@ -69,26 +81,36 @@ const char index_html[] PROGMEM = R"rawliteral(
   </html>
   )rawliteral";
 
+/**
+ * @brief Функция обработки шаблонных переменных в HTML
+ * @param var Имя переменной для обработки
+ * @return String Значение переменной или пустая строка, если переменная не найдена
+ */
 String processor(const String &var)
 {
   if (var == "STATE")
     return ledState ? "on" : "off";
-  if (var == "IP")
-    return WiFi.softAPIP().toString();
   if (var == "CLIENTS")
     return String(WiFi.softAPgetStationNum());
   return String();
 }
 
+/**
+ * @brief Обработчик главной страницы веб-сервера
+ * @details Заменяет шаблонные переменные в HTML и отправляет страницу клиенту
+ */
 void handleRoot()
 {
   String html = index_html;
   html.replace("%STATE%", processor("STATE"));
-  html.replace("%IP%", processor("IP"));
   html.replace("%CLIENTS%", processor("CLIENTS"));
   server.send(200, "text/html; charset=utf-8", html);
 }
 
+/**
+ * @brief Обработчик запроса переключения светодиода
+ * @details Меняет состояние светодиода и возвращает статус OK
+ */
 void handleToggle()
 {
   ledState = !ledState;
@@ -96,11 +118,19 @@ void handleToggle()
   server.send(200, "text/plain", "OK");
 }
 
+/**
+ * @brief Обработчик запроса текущего состояния светодиода
+ * @details Возвращает текстовое представление состояния ("on" или "off")
+ */
 void handleState()
 {
   server.send(200, "text/plain", ledState ? "on" : "off");
 }
 
+/**
+ * @brief Функция инициализации
+ * @details Настраивает пины, точку доступа Wi-Fi и веб-сервер
+ */
 void setup()
 {
   Serial.begin(115200);
@@ -112,6 +142,7 @@ void setup()
   IPAddress apIP(192, 168, 4, 1);
   WiFi.softAPConfig(apIP, apIP, IPAddress(255, 255, 255, 0));
 
+  // Вывод информации в порт
   Serial.print("Создана сеть: ");
   Serial.println(AP_SSID);
   Serial.print("IP адрес: ");
@@ -124,6 +155,10 @@ void setup()
   server.begin();
 }
 
+/**
+ * @brief Основной цикл программы
+ * @details Обрабатывает клиентские запросы и состояние кнопки
+ */
 void loop()
 {
   server.handleClient();
@@ -137,7 +172,7 @@ void loop()
     Serial.println("Кнопка нажата - светодиод переключен");
   }
 
-  // Периодический вывод информации
+  // Периодическое обновление и вывод информации о кол-ве подключенных устройствах
   if (millis() - lastUpdate > 5000)
   {
     lastUpdate = millis();
