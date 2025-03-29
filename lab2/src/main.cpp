@@ -2,6 +2,7 @@
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
 #include <EncButton.h>
+#include <stdint.h>
 
 #define LED_PIN D4            // Встроенный светодиод
 #define BUTTON_PIN D0         // Физическая кнопка
@@ -11,8 +12,8 @@
 ESP8266WebServer server(80);
 Button btn(BUTTON_PIN, INPUT_PULLUP);
 
-volatile bool ledState = false;
-unsigned long lastUpdate = 0;
+volatile uint8_t ledState = false;
+uint16_t lastUpdate = 0;
 
 const char index_html[] PROGMEM = R"rawliteral(
   <!DOCTYPE HTML>
