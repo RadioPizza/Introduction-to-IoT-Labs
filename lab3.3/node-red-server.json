@@ -1,0 +1,205 @@
+[
+    {
+        "id": "8a4f34c62652ed33",
+        "type": "tab",
+        "label": "Поток 3",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "07225960eea75a3a",
+        "type": "http in",
+        "z": "8a4f34c62652ed33",
+        "name": "Sensors Endpoint",
+        "url": "/sensors",
+        "method": "post",
+        "upload": false,
+        "swaggerDoc": "",
+        "x": 90,
+        "y": 180,
+        "wires": [
+            [
+                "1f7de82183f7b6df"
+            ]
+        ]
+    },
+    {
+        "id": "1f7de82183f7b6df",
+        "type": "json",
+        "z": "8a4f34c62652ed33",
+        "name": "Parse JSON",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 270,
+        "y": 180,
+        "wires": [
+            [
+                "f573034881f0bfa4"
+            ]
+        ]
+    },
+    {
+        "id": "f573034881f0bfa4",
+        "type": "function",
+        "z": "8a4f34c62652ed33",
+        "name": "Process Sensor Data",
+        "func": "msg.payload = {\n    temperature: msg.payload.temperature,\n    light: msg.payload.light,\n    status: msg.payload.status,\n    fan_speed: msg.payload.fan_speed,\n    switch_state: msg.payload.switch_state\n};\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 460,
+        "y": 180,
+        "wires": [
+            [
+                "e2463a71273ca72d",
+                "d0d0525b8eab1fd9",
+                "9887381c87496d1f",
+                "4b351e2b1403c980",
+                "06184d9dcbd0d278"
+            ]
+        ]
+    },
+    {
+        "id": "e2463a71273ca72d",
+        "type": "ui_text",
+        "z": "8a4f34c62652ed33",
+        "group": "dashboard-group",
+        "order": 1,
+        "width": "0",
+        "height": "0",
+        "name": "Temperature",
+        "label": "Температура:",
+        "format": "<div style=\"text-align:center;font-size:24px;font-weight:bold;\">{{msg.payload.temperature}} °C</div>",
+        "layout": "row-left",
+        "className": "",
+        "style": true,
+        "font": "",
+        "fontSize": "",
+        "color": "#000000",
+        "x": 650,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "d0d0525b8eab1fd9",
+        "type": "ui_gauge",
+        "z": "8a4f34c62652ed33",
+        "name": "Освещенность",
+        "group": "dashboard-group",
+        "order": 2,
+        "width": "3",
+        "height": "3",
+        "gtype": "donut",
+        "title": "Освещенность",
+        "label": "",
+        "format": "{{msg.payload.light}}%",
+        "min": 0,
+        "max": 100,
+        "colors": [
+            "#00bfff",
+            "#0077ff",
+            "#0000ff"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 780,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "9887381c87496d1f",
+        "type": "ui_template",
+        "z": "8a4f34c62652ed33",
+        "group": "dashboard-group",
+        "name": "Статус системы",
+        "order": 3,
+        "width": "3",
+        "height": "3",
+        "format": "<div style=\"text-align:center;\">\n  <div>Статус</div>\n  <div style=\"width:80px;height:80px;border-radius:50%;margin:10px auto;background-color:{{msg.payload.status === 'green' ? '#00ff00' : msg.payload.status === 'blue' ? '#0000ff' : '#ff0000'}};\"></div>\n  <div style=\"font-weight:bold\" >{{msg.payload.status === 'green' ? 'Норма' : msg.payload.status === 'blue' ? 'Средняя' : 'Критическая'}}</div>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": false,
+        "templateScope": "local",
+        "className": "",
+        "x": 790,
+        "y": 220,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "4b351e2b1403c980",
+        "type": "ui_gauge",
+        "z": "8a4f34c62652ed33",
+        "name": "Скорость вентилятора",
+        "group": "dashboard-group",
+        "order": 4,
+        "width": "4",
+        "height": "3",
+        "gtype": "gage",
+        "title": "Вентилятор",
+        "label": "",
+        "format": "{{msg.payload.fan_speed}}%",
+        "min": 0,
+        "max": 100,
+        "colors": [
+            "#00bfff",
+            "#0077ff",
+            "#0000ff"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 750,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "06184d9dcbd0d278",
+        "type": "ui_template",
+        "z": "8a4f34c62652ed33",
+        "group": "dashboard-group",
+        "name": "Переключатель",
+        "order": 5,
+        "width": "0",
+        "height": "0",
+        "format": "<div style=\"text-align:center; padding:10px;\">\n  <div style=\"font-weight:bold;\">Переключатель кулера</div>\n  <div style=\"display:inline-block; width:20px;height:20px;border-radius:50%;background-color:{{msg.payload.switch_state ? '#00ff00' : '#ff0000'}};\"></div>\n  <span style=\"margin-left:10px;\">{{msg.payload.switch_state ? 'ВКЛ' : 'ВЫКЛ'}}</span>\n</div>",
+        "storeOutMessages": true,
+        "fwdInMessages": true,
+        "resendOnRefresh": false,
+        "templateScope": "local",
+        "className": "",
+        "x": 670,
+        "y": 340,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "dashboard-group",
+        "type": "ui_group",
+        "name": "Температурный монитор",
+        "tab": "dashboard-tab",
+        "order": 1,
+        "disp": true,
+        "width": "12",
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "dashboard-tab",
+        "type": "ui_tab",
+        "name": "Контроль температуры",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    }
+]
