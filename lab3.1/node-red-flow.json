@@ -1,0 +1,230 @@
+[
+    {
+        "id": "4d703e70805de5ad",
+        "type": "tab",
+        "label": "Поток 1",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "682f47b425369198",
+        "type": "inject",
+        "z": "4d703e70805de5ad",
+        "name": "Автозапуск с интервалом по времени",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "2",
+        "crontab": "",
+        "once": true,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 420,
+        "y": 420,
+        "wires": [
+            [
+                "f55a8799ed429036"
+            ]
+        ]
+    },
+    {
+        "id": "f55a8799ed429036",
+        "type": "function",
+        "z": "4d703e70805de5ad",
+        "name": "Генерация случайных данных",
+        "func": "// Случайная влажность\nconst humidity = Math.random() * 100;\n\n// Статус в зависимости от влажности\nconst status = humidity > 70 ? \"wet\" : \"dry\";\n\n// Случайная температура (-10°C до +15°C)\nconst temp = (Math.random() * 25 - 10).toFixed(1);\n\nmsg.payload = {\n  humidity: humidity,\n  status: status,\n  temperature: parseFloat(temp)\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 750,
+        "y": 420,
+        "wires": [
+            [
+                "3b9b9bbe82bde0ce",
+                "bee2e002d242d1cc",
+                "ad73f9512b091a67"
+            ]
+        ]
+    },
+    {
+        "id": "3b9b9bbe82bde0ce",
+        "type": "switch",
+        "z": "4d703e70805de5ad",
+        "name": "Условие на статус",
+        "property": "payload.status",
+        "propertyType": "msg",
+        "rules": [
+            {
+                "t": "eq",
+                "v": "wet",
+                "vt": "str"
+            },
+            {
+                "t": "eq",
+                "v": "dry",
+                "vt": "str"
+            }
+        ],
+        "checkall": "true",
+        "repair": false,
+        "outputs": 2,
+        "x": 1010,
+        "y": 420,
+        "wires": [
+            [
+                "52278369788d8539"
+            ],
+            [
+                "96287938461b59d8"
+            ]
+        ]
+    },
+    {
+        "id": "b0852a9146e03066",
+        "type": "ui_text",
+        "z": "4d703e70805de5ad",
+        "group": "e5ef1bb306291474",
+        "order": 0,
+        "width": "0",
+        "height": "0",
+        "name": "text",
+        "label": "",
+        "format": "{{payload}}",
+        "layout": "row-left",
+        "className": "color: {{ui.color}};  background-color: {{ui.background}};  padding: 10px;  font-weight: bold; border-radius: 5px; text-align: center;",
+        "style": false,
+        "font": "Arial,Arial,Helvetica,sans-serif",
+        "fontSize": "14",
+        "color": "#000000",
+        "x": 1610,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "bee2e002d242d1cc",
+        "type": "ui_gauge",
+        "z": "4d703e70805de5ad",
+        "name": "",
+        "group": "e5ef1bb306291474",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "gtype": "gage",
+        "title": "Температура",
+        "label": "°С",
+        "format": "{{payload.temperature}}",
+        "min": "-10",
+        "max": "15",
+        "colors": [
+            "#00ffee",
+            "#00ff00",
+            "#c8ff00"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 1020,
+        "y": 600,
+        "wires": []
+    },
+    {
+        "id": "52278369788d8539",
+        "type": "function",
+        "z": "4d703e70805de5ad",
+        "name": "Обработка влажного статуса",
+        "func": "const original = msg.payload;\n\nif (original.temperature < 0)\n{\n    msg.payload = `❄️ Опасность обледенения!`;\n} \nelse \n{\n    msg.payload = `⚠️ Обнаружена протечка!`;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1310,
+        "y": 380,
+        "wires": [
+            [
+                "b0852a9146e03066"
+            ]
+        ]
+    },
+    {
+        "id": "96287938461b59d8",
+        "type": "function",
+        "z": "4d703e70805de5ad",
+        "name": "Обработка сухого статуса",
+        "func": "msg.payload = `✅ Норма`;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1300,
+        "y": 440,
+        "wires": [
+            [
+                "b0852a9146e03066"
+            ]
+        ]
+    },
+    {
+        "id": "ad73f9512b091a67",
+        "type": "ui_gauge",
+        "z": "4d703e70805de5ad",
+        "name": "",
+        "group": "e5ef1bb306291474",
+        "order": 1,
+        "width": 0,
+        "height": 0,
+        "gtype": "wave",
+        "title": "Влажность",
+        "label": "%",
+        "format": "{{payload.humidity}}",
+        "min": "0",
+        "max": "100",
+        "colors": [
+            "#00ffee",
+            "#00ff00",
+            "#c8ff00"
+        ],
+        "seg1": "",
+        "seg2": "",
+        "diff": false,
+        "className": "",
+        "x": 1010,
+        "y": 540,
+        "wires": []
+    },
+    {
+        "id": "e5ef1bb306291474",
+        "type": "ui_group",
+        "name": "Task 1",
+        "tab": "75ddf655cac2548b",
+        "order": 1,
+        "disp": true,
+        "width": 6,
+        "collapse": false,
+        "className": ""
+    },
+    {
+        "id": "75ddf655cac2548b",
+        "type": "ui_tab",
+        "name": "My tab",
+        "icon": "dashboard",
+        "disabled": false,
+        "hidden": false
+    }
+]
